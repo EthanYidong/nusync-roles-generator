@@ -1,11 +1,16 @@
 import { createSignal, Show, For } from "solid-js";
 
-import { FaRegularPaste, FaSolidListCheck } from "solid-icons/fa";
+import { FaRegularPaste, FaSolidListCheck, FaSolidAngleDown, FaSolidAngleUp } from "solid-icons/fa";
 
 import { customFormHandler } from "@/lib/directives";
 
 export default function SelectedEditor(props) {
   const [pasteMode, setPasteMode] = createSignal(false);
+  const [expanded, setExpanded] = createSignal(true);
+
+  if (props.selected.length) {
+    setExpanded(false);
+  }
 
   function onPasteSubmit(formData) {
     const errors = [];
@@ -47,7 +52,15 @@ export default function SelectedEditor(props) {
     <div class="card">
       <header class="card-header">
         <p class="card-header-title">{props.title}</p>
+        <button class="card-header-icon" onClick={() => setExpanded(!expanded())}>
+          <Show when={expanded()} fallback={
+            <FaSolidAngleDown/>
+          }>
+            <FaSolidAngleUp/>
+          </Show>
+        </button>
       </header>
+      <Show when={expanded()}>
       <div class="card-content" style={{ "height": "300px" }}>
         <div class="my-2" style={{ "height": "100%", "overflow-y": "scroll" }}>
           <Show
@@ -125,6 +138,7 @@ export default function SelectedEditor(props) {
           </a>
         </Show>
       </footer>
+      </Show>
     </div>
   );
 }
