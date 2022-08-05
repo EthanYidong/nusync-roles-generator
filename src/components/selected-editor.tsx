@@ -51,7 +51,7 @@ export default function SelectedEditor(props) {
   return (
     <div class="card">
       <header class="card-header">
-        <p class="card-header-title">{props.title}</p>
+        <p class="card-header-title" style={{"cursor": "pointer"}} onClick={() => setExpanded(!expanded())}>{props.title}</p>
         <button class="card-header-icon" onClick={() => setExpanded(!expanded())}>
           <Show when={expanded()} fallback={
             <FaSolidAngleDown/>
