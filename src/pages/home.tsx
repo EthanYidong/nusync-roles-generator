@@ -1,4 +1,4 @@
-import { createSignal, createEffect, For } from "solid-js";
+import { createSignal, createMemo, createEffect, Show, For, Switch, Match } from "solid-js";
 import { createStore } from "solid-js/store";
 
 import {
@@ -13,10 +13,28 @@ import { saveAs } from "file-saver";
 
 import { useStorage } from "@/lib/storage";
 import type { State } from "@/lib/models";
+import { canonicalRoleName } from "@/lib/regex";
 
 import ArrayEditor from "@/components/array-editor";
 import SelectedEditor from "@/components/selected-editor";
 import Errors from "@/components/errors";
+
+function RoleName(props) {
+  const parsedRole = createMemo(() => props.role.name.match(canonicalRoleName));
+
+  return (
+    <>
+      {parsedRole()[1]}
+      <Show when={parsedRole()[2]}>
+        &nbsp;<span class="has-text-grey"><em>({parsedRole()[2]})</em></span>
+      </Show>
+      <Switch>
+        <Match when={props.role.people.length == 1}><>&nbsp;[{props.state.people.find((p) => p.id == props.role.people[0]).name}]</></Match>
+        <Match when={props.role.people.length > 1}><>&nbsp;[{props.role.people.length}]</></Match>
+      </Switch>
+    </>
+  );
+}
 
 export default function Home() {
   const [rolePasteErrors, setRolePasteErrors] = createSignal([]);
@@ -52,7 +70,7 @@ export default function Home() {
     ]);
   }
 
-  function updatePerson(id: number, person: { name; nusnetID }) {
+  function updatePerson(id: number, person: { name?; nusnetID? }) {
     setState("people", (people) => people.map((p) => p.id == id ? {...p,...person}: p))
   }
 
@@ -67,7 +85,7 @@ export default function Home() {
     ]);
   }
 
-  function updateRole(id: number, role: { name; startDate; endDate }) {
+  function updateRole(id: number, role: { name?; startDate?; endDate? }) {
     setState("roles", (roles) => roles.map((r) => r.id == id ? {...r,...role}: r))
   }
 
@@ -95,16 +113,6 @@ export default function Home() {
     }
   }
 
-  function roleDescriptor(role) {
-    if (role.people.length == 1) {
-      return `[${state.people.find((p) => p.id == role.people[0]).name}]`;
-    } else if (role.people.length == 0) {
-      return "";
-    } else {
-      return `(${role.people.length})`
-    }
-  }
-
   function onDownloadState() {
     saveAs(
       new Blob([JSON.stringify(state, null, 2)], {
@@ -129,7 +137,7 @@ export default function Home() {
         if (role.people.includes(person.id)) {
           records.push({
             "Username (nusstu\\nusnet)": person.nusnetID,
-            PositionName: role.name,
+            PositionName: role.name.match(canonicalRoleName)[1],
             StartDate: role.startDate,
             EndDate: role.endDate,
           });
@@ -191,8 +199,8 @@ export default function Home() {
               <ArrayEditor
                 title="People"
                 fields={[
-                  { name: "name", display: "Name" },
-                  { name: "nusnetID", display: "NUSNET ID" },
+                  { name: "name", display: "Name", edit: true },
+                  { name: "nusnetID", display: "NUSNET ID", edit: true },
                 ]}
                 unique="name"
                 data={state.people}
@@ -204,9 +212,9 @@ export default function Home() {
               <ArrayEditor
                 title="Roles"
                 fields={[
-                  { name: "name", display: "Name" },
-                  { name: "startDate", display: "Start Date" },
-                  { name: "endDate", display: "End Date" },
+                  { name: "name", display: "Name", edit: true },
+                  { name: "startDate", display: "Start Date", edit: true },
+                  { name: "endDate", display: "End Date", edit: true },
                 ]}
                 unique="name"
                 data={state.roles}
@@ -220,7 +228,7 @@ export default function Home() {
               {(role, index) => (
                 <div class="mb-2">
                   <SelectedEditor
-                    title={`Role — ${role.name} ${roleDescriptor(role)}`}
+                    title={<RoleName role={role} state={state}/>}
                     selectFrom={state.people.map((p) => ({
                       id: p.id,
                       display: p.name,

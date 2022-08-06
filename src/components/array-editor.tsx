@@ -1,10 +1,15 @@
-import { createSignal, Show, For } from "solid-js";
-import { FaRegularPaste, FaSolidTableList } from "solid-icons/fa";
+import { createSignal,createSelector, createUniqueId, Show, For } from "solid-js";
+import { FaRegularPaste, FaSolidTableList, FaSolidAngleDown, FaSolidAngleUp, FaRegularPenToSquare, FaSolidFloppyDisk } from "solid-icons/fa";
 
 import { customFormHandler } from "@/lib/directives";
 
 export default function ArrayEditor(props) {
   const [pasteMode, setPasteMode] = createSignal(false);
+  const [expanded, setExpanded] = createSignal(true);
+  const [editing, setEditing] = createSignal(null);
+  const isEditing = createSelector(editing);
+
+  const editFormId = createUniqueId();
 
   function onPasteSubmit(formData) {
     for (const entry of formData.pasteData.split("\n")) {
@@ -23,31 +28,63 @@ export default function ArrayEditor(props) {
     setPasteMode(false);
   }
 
+  function onEditSubmit(data) {
+    props.updateItem(editing(), data);
+    setEditing(null);
+  }
+
   return (
+    <>
+    <form id={editFormId} use:customFormHandler={onEditSubmit} onSubmit={() => console.log("submit")}/>
     <div class="card">
       <header class="card-header">
-        <p class="card-header-title">{props.title}</p>
+      <p class="card-header-title" style={{"cursor": "pointer"}} onClick={() => setExpanded(!expanded())}>{props.title}</p>
+      <button class="card-header-icon" onClick={() => setExpanded(!expanded())}>
+        <Show when={expanded()} fallback={
+          <FaSolidAngleDown/>
+        }>
+          <FaSolidAngleUp/>
+        </Show>
+      </button>
       </header>
+      <Show when={expanded()}>
       <div class="card-content">
         <div class="my-2">
           <Show
             when={pasteMode()}
             fallback={
-              <table class="table">
+              <table class="table" style={{"width": "100%"}}>
                 <thead>
                   <tr>
                     <For each={props.fields}>
                       {({ display }: any) => <th>{display}</th>}
                     </For>
+                    <th style={{"width": "32px"}}></th>
                   </tr>
                 </thead>
                 <tbody>
                   <For each={props.data}>
-                    {(dataEntry) => (
+                    {(dataEntry: any) => (
                       <tr>
-                        <For each={props.fields}>
-                          {({ name }: any) => <td>{dataEntry[name]}</td>}
-                        </For>
+                          <For each={props.fields}>
+                            {({ name, edit }: any) =>
+                              <td>
+                                <Show when={isEditing(dataEntry.id) && edit} fallback={<>{dataEntry[name]}</>}>
+                                  <input form={editFormId} class="input is-small" type="text" name={name} value={dataEntry[name]}></input>
+                                </Show>
+                              </td>
+                            }
+                          </For>
+                          <td>
+                            <Show when={isEditing(dataEntry.id)} fallback={
+                              <button class="button is-text is-small" onClick={() => setEditing(dataEntry.id)}>
+                                <FaRegularPenToSquare/>
+                              </button>}>
+                              <button class="button is-text is-small" type="submit" form={editFormId}>
+                                <FaSolidFloppyDisk/>
+                              </button>
+                            </Show>
+                          </td>
                       </tr>
                     )}
                   </For>
@@ -66,7 +103,7 @@ export default function ArrayEditor(props) {
                   ></textarea>
                 </div>
               </div>
-              <button type="submit" class="button">
+              <button form={editFormId} type="submit" class="button">
                 Confirm
               </button>
             </form>
@@ -89,6 +126,8 @@ export default function ArrayEditor(props) {
           </a>
         </Show>
       </footer>
+      </Show>
     </div>
+    </>
   );
 }
